@@ -604,7 +604,24 @@ v.addEventListener("ended", function(){
   }
 });
 v.addEventListener("error", function(){
-  if(v.getAttribute("src")) showErr();
+  var err = v.error;
+  if(!v.getAttribute("src")) return;
+  if(err && err.code === 1) return; // MEDIA_ERR_ABORTED: src o'zgardi, yangi yuklanish boshlanadi — haqiqiy xato emas
+  // Tarmoq uzilsa (4G/VPN), bir marta avtomatik qayta urinish — joriy vaqtdan davom etadi
+  if(err && err.code === 2 && !v._retried){
+    v._retried = true;
+    var t = v.currentTime || 0;
+    hideErr();
+    v.load();
+    var onMeta = function(){
+      v.removeEventListener("loadedmetadata", onMeta);
+      try{ if(t > 0 && t < v.duration) v.currentTime = t; }catch(e){}
+      v.play().catch(function(){});
+    };
+    v.addEventListener("loadedmetadata", onMeta);
+    return;
+  }
+  showErr();
 });
 $("pRetry").addEventListener("click", function(){
   hideErr();
@@ -621,6 +638,14 @@ window.playEp = function(kod, qism, btn){
   var a = findAnime(kod);
   if(a) saveWatchHist(kod, a.title, a.poster, qism);
   curKod = kod; curQism = qism;
+  // Ayni qism allaqachon yuklangan bo'lsa, qayta yuklamaymiz:
+  // v.load() avvalgi yuklanishni bekor qilib MEDIA_ERR_ABORTED beradi.
+  if(v.getAttribute("src") && v._loadedKod === kod && v._loadedQism === qism){
+    v.play().catch(function(){});
+    showControls();
+    return;
+  }
+  v._loadedKod = kod; v._loadedQism = qism; v._retried = false;
   $("playerWrap").style.display = "block";
   hideErr();
   pPlayed.style.width = "0%"; pKnob.style.left = "0%"; pBuffered.style.width = "0%";
@@ -668,6 +693,7 @@ window.openAnime = function(kod){
 };
 $("closeWatchBtn").addEventListener("click", function(){
   v.pause(); v.removeAttribute("src"); v.load();
+  v._loadedKod = null; v._loadedQism = null; v._retried = false;
   hideErr();
   $("watchModal").style.display = "none";
   document.body.style.overflow = "";
