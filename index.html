@@ -621,6 +621,9 @@ v.addEventListener("error", function(){
     v.addEventListener("loadedmetadata", onMeta);
     return;
   }
+  // Haqiqiy xato: qayta yuklashga ruxsat berish uchun loaded belgini tozalaymiz,
+  // aks holda "Qayta urinish" buzilgan elementda play() chaqirib qoladi.
+  v._loadedKod = null; v._loadedQism = null;
   showErr();
 });
 $("pRetry").addEventListener("click", function(){
