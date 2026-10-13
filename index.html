@@ -95,6 +95,8 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-app
 .episode-btn.active{background:var(--accent);border-color:var(--accent)}
 .player-wrap{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9;margin-bottom:12px}
 .player-wrap video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+/* Pseudo-fullscreen: Fullscreen API bloklangan WebView'lar uchun */
+.player-wrap.pseudo-full{position:fixed !important;inset:0 !important;width:100vw !important;height:100vh !important;height:100dvh !important;z-index:99999 !important;border-radius:0 !important;aspect-ratio:auto !important;margin:0 !important}
 .tap-layer{position:absolute;inset:0;z-index:3}
 .p-controls{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:6px 8px 4px;background:linear-gradient(transparent,rgba(0,0,0,.85));opacity:1;transition:opacity .3s}
 .p-controls.hide{opacity:0;pointer-events:none}
@@ -555,12 +557,37 @@ $("pMuteBtn").addEventListener("click", function(e){
   $("pMuteBtn").textContent = v.muted ? "🔇" : "🔊";
   showControls();
 });
-$("pFullBtn").addEventListener("click", function(e){
-  e.stopPropagation();
-  var p = $("playerWrap");
-  if(p.requestFullscreen) p.requestFullscreen();
-  else if(p.webkitRequestFullscreen) p.webkitRequestFullscreen();
-});
+function toggleFullscreen(){
+  var wrap = $("playerWrap");
+  // Pseudo-fullscreen bo'lsa — chiqish
+  if(wrap.classList.contains("pseudo-full")){ wrap.classList.remove("pseudo-full"); return; }
+  // Native fullscreen bo'lsa — chiqish
+  if(document.fullscreenElement || document.webkitFullscreenElement){
+    if(document.exitFullscreen) document.exitFullscreen();
+    else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+    return;
+  }
+  // Kirish: bir nechta usulni ketma-ket urinamiz
+  var steps = [
+    function(){ return wrap.requestFullscreen(); },
+    function(){ return v.requestFullscreen(); },
+    function(){ if(v.webkitEnterFullscreen) v.webkitEnterFullscreen(); else throw new Error("no webkitEnter"); },
+    function(){ if(wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen(); else throw new Error("no webkitReq"); }
+  ];
+  var i = 0;
+  function next(){
+    if(i >= steps.length){ wrap.classList.add("pseudo-full"); return; }
+    var fn = steps[i++];
+    var r;
+    try{ r = fn(); }catch(err){ next(); return; }
+    if(r && r.then){ r.then(function(){}).catch(function(){ next(); }); }
+    // sync usul xato bermasa — muvaffaqiyatli deb hisoblaymiz
+  }
+  next();
+}
+$("pFullBtn").addEventListener("click", function(e){ e.stopPropagation(); toggleFullscreen(); });
+document.addEventListener("fullscreenchange", function(){ if(!document.fullscreenElement) $("playerWrap").classList.remove("pseudo-full"); });
+document.addEventListener("webkitfullscreenchange", function(){ if(!document.webkitFullscreenElement) $("playerWrap").classList.remove("pseudo-full"); });
 
 /* Progress chizig'i: bosish + surish */
 var scrubbing = false;
