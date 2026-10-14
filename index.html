@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Animed.uz — Anime katalogi</title>
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://musayeva951.github.io/animed-site/">
+<meta property="og:site_name" content="Animed.uz">
+<meta property="og:title" content="Animed.uz — Anime katalogi">
+<meta property="og:description" content="Animed.uz — anime katalogi va onlayn tomosha. Ilovani yuklab oling!">
+<meta property="og:image" content="https://musayeva951.github.io/animed-site/icon-512.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Animed.uz — Anime katalogi">
+<meta name="twitter:description" content="Animed.uz — anime katalogi va onlayn tomosha. Ilovani yuklab oling!">
+<meta name="twitter:image" content="https://musayeva951.github.io/animed-site/icon-512.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0a0e1a">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -139,6 +151,7 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-app
     <input type="text" id="searchInput" placeholder="Qidirish..." autocomplete="off">
   </div>
   <div class="bell" id="bellBtn">🔔</div>
+  <div class="bell" id="installBtn" style="display:none" title="Ilovani yuklab olish">📥</div>
 </div>
 <audio id="bgm" loop preload="auto"></audio>
 
@@ -255,6 +268,9 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-app
     <a class="prof-row" href="https://t.me/umid_ss7" style="border-top:1px solid #232c4d;text-decoration:none;color:inherit">
       <div class="prof-ico">🎧</div><div style="flex:1;font-weight:700">Qo'llab-quvvatlash</div><span style="color:var(--muted)">›</span>
     </a>
+    <div class="prof-row" id="rowInstall" style="border-top:1px solid #232c4d;display:none">
+      <div class="prof-ico">📥</div><div style="flex:1;font-weight:700">Ilovani yuklab olish</div><span style="color:var(--muted)">›</span>
+    </div>
   </div>
   <div class="prof-label">🕘 TOMOSHA TARIXI</div>
   <div class="prof-card" id="watchHistBox" style="padding:6px 0">
@@ -899,6 +915,44 @@ loadAnimes();
 })();
 // PWA: service worker
 if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
+// Ilovani yuklab olish tugmasi (PWA o'rnatish + APK)
+(function(){
+  var installBtn = document.getElementById("installBtn");
+  var rowInstall = document.getElementById("rowInstall");
+  var deferredPrompt = null;
+  var isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  function showInstall(){
+    if(isStandalone) return;
+    if(installBtn) installBtn.style.display = "flex";
+    if(rowInstall) rowInstall.style.display = "flex";
+  }
+  function hideInstall(){
+    if(installBtn) installBtn.style.display = "none";
+    if(rowInstall) rowInstall.style.display = "none";
+  }
+  if(isStandalone){ hideInstall(); return; }
+  window.addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    showInstall();
+  });
+  window.addEventListener("appinstalled", function(){ hideInstall(); });
+  var isAndroid = /Android/i.test(navigator.userAgent);
+  var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isAndroid || isIOS) showInstall();
+  function onInstallClick(){
+    if(deferredPrompt){
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function(){ deferredPrompt = null; });
+      return;
+    }
+    if(isAndroid){ window.location.href = "animed-uz.apk"; return; }
+    if(isIOS){ alert("Ilovani o'rnatish uchun Safari'da Ulashish (Share) → Bosh ekranga qo'shish (Add to Home Screen) ni bosing."); return; }
+    alert("Ilovani o'rnatish uchun brauzer menyusidan O'rnatish / Install ni tanlang.");
+  }
+  if(installBtn) installBtn.addEventListener("click", onInstallClick);
+  if(rowInstall) rowInstall.addEventListener("click", onInstallClick);
+})();
 </script>
 </body>
 </html>
