@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Animed.uz — Anime katalogi</title>
+<meta name="description" content="Animed.uz — anime katalogi va onlayn tomosha. O'zbek tilida anime, yangi qismlar, trend anime. Ilovani yuklab oling!">
+<meta name="keywords" content="animed.uz, animed, anime, anime uz, anime o'zbek, anime katalogi, anime tomosha qilish, animed uz">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://musayeva951.github.io/animed-site/">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Animed.uz","alternateName":"animed.uz","url":"https://musayeva951.github.io/animed-site/","description":"Animed.uz — anime katalogi va onlayn tomosha."}</script>
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://musayeva951.github.io/animed-site/">
 <meta property="og:site_name" content="Animed.uz">
@@ -28,7 +33,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--bg:#0a0e1a;--card:#141a2e;--card2:#1a2138;--accent:#7c3aed;--accent2:#a78bfa;--green:#22c55e;--red:#ef4444;--gold:#fbbf24;--txt:#f1f5f9;--muted:#8b9bb4;--line:#232c4d}
 html,body{min-height:100%}
-body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;padding-bottom:84px}
+body{background:linear-gradient(rgba(5,7,15,.60),rgba(5,7,15,.78)),url('bg.jpg') center center/cover no-repeat fixed,var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;padding-bottom:84px}
 /* Topbar */
 .topbar{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(10,14,26,.94);position:sticky;top:0;z-index:100;backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .logo{font-size:20px;font-weight:900;color:#fff;text-decoration:none;letter-spacing:1px;flex-shrink:0}
@@ -116,6 +121,23 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-app
 .player-wrap video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
 /* Pseudo-fullscreen: Fullscreen API bloklangan WebView'lar uchun */
 .player-wrap.pseudo-full{position:fixed !important;inset:0 !important;width:100vw !important;height:100vh !important;height:100dvh !important;z-index:99999 !important;border-radius:0 !important;aspect-ratio:auto !important;margin:0 !important}
+/* To'liq ekran + yotqizilgan holat (landscape): video 6x4 markazda, qora fon atrofida */
+@media (orientation: landscape){
+  .player-wrap:fullscreen video,
+  .player-wrap:-webkit-full-screen video,
+  .player-wrap.pseudo-full video{
+    inset:auto !important;left:50% !important;top:50% !important;
+    transform:translate(-50%,-50%) !important;
+    width:min(100vw,150vh) !important;height:auto !important;
+    aspect-ratio:6/4 !important;object-fit:cover !important;
+  }
+  video:fullscreen,
+  video:-webkit-full-screen{
+    left:0 !important;right:0 !important;top:0 !important;bottom:0 !important;margin:auto !important;
+    width:min(100vw,150vh) !important;height:auto !important;
+    aspect-ratio:6/4 !important;object-fit:cover !important;
+  }
+}
 .tap-layer{position:absolute;inset:0;z-index:3}
 .p-controls{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:6px 8px 4px;background:linear-gradient(transparent,rgba(0,0,0,.85));opacity:1;transition:opacity .3s}
 .p-controls.hide{opacity:0;pointer-events:none}
@@ -916,42 +938,52 @@ loadAnimes();
 // PWA: service worker
 if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
 // Ilovani yuklab olish tugmasi (PWA o'rnatish + APK)
+// MUHIM: tugma o'rnatilgan PWA (standalone) ichida ham ko'rinishi kerak —
+// PWA ≠ APK, foydalanuvchi APK ni yuklashi kerak bo'lishi mumkin.
 (function(){
   var installBtn = document.getElementById("installBtn");
   var rowInstall = document.getElementById("rowInstall");
   var deferredPrompt = null;
-  var isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  var isAndroid = /Android/i.test(navigator.userAgent);
+  var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
   function showInstall(){
-    if(isStandalone) return;
     if(installBtn) installBtn.style.display = "flex";
     if(rowInstall) rowInstall.style.display = "flex";
   }
-  function hideInstall(){
-    if(installBtn) installBtn.style.display = "none";
-    if(rowInstall) rowInstall.style.display = "none";
+  function downloadApk(){
+    // Yuklab olishni to'g'ridan-to'g'ri boshlash (PWA oynasida ham ishlaydi)
+    var a = document.createElement("a");
+    a.href = "animed-uz.apk";
+    a.setAttribute("download", "animed-uz.apk");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
-  if(isStandalone){ hideInstall(); return; }
-  window.addEventListener("beforeinstallprompt", function(e){
-    e.preventDefault();
-    deferredPrompt = e;
-    showInstall();
-  });
-  window.addEventListener("appinstalled", function(){ hideInstall(); });
-  var isAndroid = /Android/i.test(navigator.userAgent);
-  var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if(isAndroid || isIOS) showInstall();
   function onInstallClick(){
+    // Yuqori 📥 tugma: PWA o'rnatish taklifi bo'lsa uni ko'rsat, bo'lmasa APK
     if(deferredPrompt){
       deferredPrompt.prompt();
       deferredPrompt.userChoice.then(function(){ deferredPrompt = null; });
       return;
     }
-    if(isAndroid){ window.location.href = "animed-uz.apk"; return; }
+    if(isAndroid){ downloadApk(); return; }
     if(isIOS){ alert("Ilovani o'rnatish uchun Safari'da Ulashish (Share) → Bosh ekranga qo'shish (Add to Home Screen) ni bosing."); return; }
     alert("Ilovani o'rnatish uchun brauzer menyusidan O'rnatish / Install ni tanlang.");
   }
+  function onApkClick(){
+    // Profil qatori: har doim to'g'ridan-to'g'ri APK yuklaydi
+    if(isAndroid){ downloadApk(); return; }
+    if(isIOS){ alert("Ilovani o'rnatish uchun Safari'da Ulashish (Share) → Bosh ekranga qo'shish (Add to Home Screen) ni bosing."); return; }
+    alert("Ilovani o'rnatish uchun brauzer menyusidan O'rnatish / Install ni tanlang.");
+  }
+  window.addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    showInstall();
+  });
+  if(isAndroid || isIOS) showInstall();
   if(installBtn) installBtn.addEventListener("click", onInstallClick);
-  if(rowInstall) rowInstall.addEventListener("click", onInstallClick);
+  if(rowInstall) rowInstall.addEventListener("click", onApkClick);
 })();
 </script>
 </body>

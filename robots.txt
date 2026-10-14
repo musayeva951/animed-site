@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://musayeva951.github.io/animed-site/sitemap.xml
