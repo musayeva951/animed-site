@@ -29,6 +29,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="animed.uz">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--bg:#0a0e1a;--card:#141a2e;--card2:#1a2138;--accent:#7c3aed;--accent2:#a78bfa;--green:#22c55e;--red:#ef4444;--gold:#fbbf24;--txt:#f1f5f9;--muted:#8b9bb4;--line:#232c4d}
@@ -255,7 +256,7 @@ body{background:linear-gradient(rgba(5,7,15,.60),rgba(5,7,15,.78)),url('bg.jpg')
       <div class="prof-ava" id="profAva">👤</div>
       <div style="flex:1;min-width:0">
         <div class="prof-name" id="profName">Mehmon</div>
-        <div class="prof-id">animed.uz</div>
+        <div class="prof-id" id="profId">animed.uz</div>
       </div>
       <div class="bell" id="profBell">🔔</div>
     </div>
@@ -269,6 +270,12 @@ body{background:linear-gradient(rgba(5,7,15,.60),rgba(5,7,15,.78)),url('bg.jpg')
       </div>
       <button class="prof-prem-btn" id="profPremBtn">Premium olish →</button>
     </div>
+  </div>
+  <div class="prof-card" id="loginCard" style="display:none">
+    <div style="font-weight:800;font-size:15px;margin-bottom:4px">Kirish / Ro'yxatdan o'tish</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:12px">Google akkaunt yoki Telegram orqali kiring.</div>
+    <div id="googleBtnWrap" style="margin-bottom:10px"></div>
+    <div id="telegramBtnWrap"></div>
   </div>
   <div class="prof-label">ASOSIY</div>
   <div class="prof-card" style="padding:0">
@@ -522,7 +529,7 @@ $("rowPromo").addEventListener("click", function(){
 });
 $("logoutBtn").addEventListener("click", function(){
   if(confirm("Chiqmoqchimisiz?")){
-    try{ localStorage.removeItem("animed_name"); localStorage.removeItem("animed_pic"); localStorage.removeItem("chat_name"); }catch(e){}
+    try{ localStorage.removeItem("animed_name"); localStorage.removeItem("animed_pic"); localStorage.removeItem("chat_name"); clearAuth(); }catch(e){}
     renderProfile();
   }
 });
@@ -828,28 +835,91 @@ function sendChat(){
 $("chatSendBtn").addEventListener("click", sendChat);
 $("chatInput").addEventListener("keydown", function(e){ if(e.key === "Enter") sendChat(); });
 
+/* ---------- Kirish (Google / Telegram) ---------- */
+var AUTH_CONFIG = {
+  googleClientId: "",
+  googleEnabled: false,
+  telegramEnabled: false,
+  telegramBot: "animed_uz_bot"
+};
+function getAuth(){ try{ return JSON.parse(localStorage.getItem("animed_auth") || "null"); }catch(e){ return null; } }
+function setAuth(a){ try{ localStorage.setItem("animed_auth", JSON.stringify(a)); }catch(e){} }
+function clearAuth(){ try{ localStorage.removeItem("animed_auth"); }catch(e){} }
+function onGoogleCredential(resp){
+  try{
+    var parts = resp.credential.split(".");
+    var payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    setAuth({provider: "google", name: payload.name || payload.email || "Google", pic: payload.picture || "", handle: payload.email || "Google", verified: true, at: Date.now()});
+    renderProfile();
+  }catch(e){ alert("Google orqali kirishda xato."); }
+}
+function onTelegramAuth(user){
+  var handle = user.username ? "@" + user.username : (user.first_name || "Telegram");
+  setAuth({provider: "telegram", name: handle, pic: user.photo_url || "", handle: handle, tgId: user.id, verified: true, at: Date.now()});
+  renderProfile();
+}
+window.onTelegramAuth = onTelegramAuth;
+function renderLogin(){
+  var card = $("loginCard"); if(!card) return;
+  var auth = getAuth();
+  card.style.display = (auth && auth.verified) ? "none" : "block";
+  if(auth && auth.verified) return;
+  var g = $("googleBtnWrap");
+  if(AUTH_CONFIG.googleEnabled && AUTH_CONFIG.googleClientId && window.google && google.accounts && google.accounts.id){
+    g.innerHTML = "";
+    google.accounts.id.initialize({client_id: AUTH_CONFIG.googleClientId, callback: onGoogleCredential});
+    google.accounts.id.renderButton(g, {theme: "filled_black", size: "large", width: 280, text: "signin_with"});
+  } else {
+    g.innerHTML = '<button class="prof-prem-btn" style="width:100%;text-align:center" onclick="alert(\'Google orqali kirish tez orada yoqiladi.\')">G &nbsp; Google orqali kirish</button>';
+  }
+  var t = $("telegramBtnWrap");
+  if(AUTH_CONFIG.telegramEnabled){
+    t.innerHTML = "";
+    var s = document.createElement("script");
+    s.async = true;
+    s.src = "https://telegram.org/js/telegram-widget.js?22";
+    s.setAttribute("data-telegram-login", AUTH_CONFIG.telegramBot);
+    s.setAttribute("data-size", "large");
+    s.setAttribute("data-onauth", "onTelegramAuth(user)");
+    s.setAttribute("data-request-access", "write");
+    t.appendChild(s);
+  } else {
+    t.innerHTML = '<button class="prof-prem-btn" style="width:100%;text-align:center" onclick="alert(\'Telegram orqali kirish tez orada yoqiladi.\')">✈️ &nbsp; Telegram orqali kirish</button>';
+  }
+}
+
 /* ---------- Profil ---------- */
 function renderProfile(){
-  var name = "", pic = "", fromTg = false;
-  try{
-    if(window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.user){
-      var u = Telegram.WebApp.initDataUnsafe.user;
-      if(u.username) name = "@" + u.username;
-      else if(u.first_name) name = u.first_name;
-      if(u.photo_url) pic = u.photo_url;
-      fromTg = true;
-      try{ localStorage.setItem("animed_name", name); if(pic) localStorage.setItem("animed_pic", pic); }catch(e){}
-    }
-  }catch(e){}
+  var name = "", pic = "", fromTg = false, authVerified = false;
+  var auth = getAuth();
+  if(auth && auth.verified){
+    name = auth.name || ""; pic = auth.pic || ""; authVerified = true;
+    try{ localStorage.setItem("animed_name", name); if(pic) localStorage.setItem("animed_pic", pic); }catch(e){}
+  }
+  if(!name){
+    try{
+      if(window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.user){
+        var u = Telegram.WebApp.initDataUnsafe.user;
+        if(u.username) name = "@" + u.username;
+        else if(u.first_name) name = u.first_name;
+        if(u.photo_url) pic = u.photo_url;
+        fromTg = true;
+        try{ localStorage.setItem("animed_name", name); if(pic) localStorage.setItem("animed_pic", pic); }catch(e){}
+      }
+    }catch(e){}
+  }
   if(!name){ try{ name = localStorage.getItem("animed_name") || ""; pic = localStorage.getItem("animed_pic") || ""; }catch(e){} }
   if(!name) name = "Mehmon";
   $("profName").textContent = name;
+  var pid = $("profId");
+  if(pid){ pid.textContent = authVerified ? (auth.handle || auth.provider) : "animed.uz"; }
+  renderLogin();
   var ava = $("profAva");
   if(pic){ ava.innerHTML = '<img src="'+esc(pic)+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover" onerror="this.remove()">'; }
   else { ava.textContent = name.charAt(0).toUpperCase(); }
   var nm = $("profName");
   nm.onclick = null;
-  if(!fromTg){
+  if(!fromTg && !authVerified){
     nm.style.cursor = "pointer";
     nm.title = "O'zgartirish uchun bosing";
     nm.onclick = function(){
