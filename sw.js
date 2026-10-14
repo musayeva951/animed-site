@@ -1,4 +1,4 @@
-const CACHE = "animed-v3";
+const CACHE = "animed-v4";
 const CORE = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(CORE); }).then(function () { return self.skipWaiting(); }));
@@ -13,6 +13,18 @@ self.addEventListener("fetch", function (e) {
   // API va video oqimi — faqat tarmoqdan, cache'ga olinmaydi
   if (url.pathname.indexOf("/api/") !== -1) return;
   if (e.request.url.indexOf("anime-bot-production") !== -1) return;
+  var isNav = e.request.mode === "navigate" || url.pathname === "/" || url.pathname.endsWith("/index.html");
+  if (isNav) {
+    // Sahifa har doim tarmoqdan yangilanadi, offline bo'lsa cache'dan
+    e.respondWith(
+      fetch(e.request).then(function (resp) {
+        var copy = resp.clone();
+        caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
+        return resp;
+      }).catch(function () { return caches.match(e.request).then(function (r) { return r || caches.match("./index.html"); }); })
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then(function (res) {
       return res || fetch(e.request).then(function (resp) {
