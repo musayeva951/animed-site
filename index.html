@@ -839,7 +839,7 @@ $("chatInput").addEventListener("keydown", function(e){ if(e.key === "Enter") se
 var AUTH_CONFIG = {
   googleClientId: "",
   googleEnabled: false,
-  telegramEnabled: false,
+  telegramEnabled: true,
   telegramBot: "animed_uz_bot"
 };
 function getAuth(){ try{ return JSON.parse(localStorage.getItem("animed_auth") || "null"); }catch(e){ return null; } }
@@ -854,9 +854,16 @@ function onGoogleCredential(resp){
   }catch(e){ alert("Google orqali kirishda xato."); }
 }
 function onTelegramAuth(user){
-  var handle = user.username ? "@" + user.username : (user.first_name || "Telegram");
-  setAuth({provider: "telegram", name: handle, pic: user.photo_url || "", handle: handle, tgId: user.id, verified: true, at: Date.now()});
-  renderProfile();
+  fetch(API_BASE + "/api/auth/telegram", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(user)})
+    .then(function(r){ if(!r.ok) throw new Error("verify"); return r.json(); })
+    .then(function(d){
+      if(!d.ok || !d.user) throw new Error("verify");
+      var u = d.user;
+      var handle = u.username ? "@" + u.username : (u.first_name || "Telegram");
+      setAuth({provider: "telegram", name: handle, pic: u.photo_url || "", handle: handle, tgId: u.id, verified: true, at: Date.now()});
+      renderProfile();
+    })
+    .catch(function(){ alert("Telegram orqali kirishni tasdiqlab bo'lmadi. Qayta urinib ko'ring."); });
 }
 window.onTelegramAuth = onTelegramAuth;
 function renderLogin(){
