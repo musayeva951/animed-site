@@ -823,10 +823,13 @@ function sendChat(){
   if(!text) return;
   var btn = $("chatSendBtn");
   btn.disabled = true;
+  var chatName = getUserName();
+  var chatKey = chatName.trim().toLowerCase().replace(/^@/, "");
+  if(chatKey === "kitagawa" || chatKey === "umid_ss7" || chatKey === "admin" || chatKey === "animed" || chatKey === "animed.uz"){ chatName = "Anonim"; }
   fetch(API_BASE + "/api/chat/send", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ username: getUserName(), text: text })
+    body: JSON.stringify({ username: chatName, text: text })
   }).then(function(r){ if(!r.ok) throw new Error("http"); return r.json(); })
     .then(function(){ inp.value = ""; loadChat(); })
     .catch(function(){ alert("Xabar yuborilmadi. Qayta urinib ko'ring."); })
